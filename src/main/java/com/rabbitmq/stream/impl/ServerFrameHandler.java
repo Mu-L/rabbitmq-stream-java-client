@@ -372,15 +372,14 @@ class ServerFrameHandler {
         Object chunkContext) {
       int entrySize = bb.readInt();
       read += 4;
-      byte[] data = new byte[entrySize];
-      bb.readBytes(data);
       read += entrySize;
 
       if (ignore && Long.compareUnsigned(offset, offsetLimit) < 0) {
+        bb.skipBytes(entrySize);
         messageIgnored.set(true);
       } else {
         try {
-          Message message = codec.decode(data);
+          Message message = codec.decode(bb, entrySize);
           messageListener.handle(
               subscriptionId, offset, chunkTimestamp, committedChunkId, chunkContext, message);
         } catch (RuntimeException e) {

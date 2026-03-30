@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2025 Broadcom. All Rights Reserved.
+// Copyright (c) 2020-2026 Broadcom. All Rights Reserved.
 // The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
 //
 // This software, the RabbitMQ Stream Java client library, is dual-licensed under the
@@ -21,10 +21,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import com.rabbitmq.stream.Codec;
 import com.rabbitmq.stream.Constants;
 import com.rabbitmq.stream.Message;
 import com.rabbitmq.stream.Properties;
+import com.rabbitmq.stream.codec.ByteArrayEncodedMessage;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -157,7 +157,7 @@ public class FrameTest {
                 channel,
                 b(1),
                 test.sizes.stream()
-                    .map(size -> new Codec.EncodedMessage(size, new byte[size]))
+                    .map(size -> new ByteArrayEncodedMessage(size, new byte[size]))
                     .collect(Collectors.toList()),
                 Client.OUTBOUND_MESSAGE_WRITE_CALLBACK,
                 publishSequenceFunction);

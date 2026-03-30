@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2025 Broadcom. All Rights Reserved.
+// Copyright (c) 2020-2026 Broadcom. All Rights Reserved.
 // The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
 //
 // This software, the RabbitMQ Stream Java client library, is dual-licensed under the
@@ -18,6 +18,7 @@ import com.rabbitmq.stream.Codec;
 import com.rabbitmq.stream.Message;
 import com.rabbitmq.stream.MessageBuilder;
 import com.rabbitmq.stream.Properties;
+import io.netty.buffer.ByteBuf;
 import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -261,14 +262,23 @@ public class QpidProtonCodec implements Codec {
     }
     ByteArrayWritableBuffer writableBuffer = new ByteArrayWritableBuffer(bufferSize);
     qpidMessage.encode(writableBuffer);
-    return new EncodedMessage(writableBuffer.getArrayLength(), writableBuffer.getArray());
+    return new ByteArrayEncodedMessage(writableBuffer.getArrayLength(), writableBuffer.getArray());
   }
 
   @Override
-  public Message decode(byte[] data) {
+  public Message decode(ByteBuf buf, int length) {
     org.apache.qpid.proton.message.Message message =
         org.apache.qpid.proton.message.Message.Factory.create();
-    message.decode(data, 0, data.length);
+    if (buf.nioBufferCount() > 0) {
+      ReadableBuffer readableBuffer =
+          ReadableBuffer.ByteBufferReader.wrap(buf.nioBuffer(buf.readerIndex(), length));
+      message.decode(readableBuffer);
+      buf.skipBytes(length);
+    } else {
+      byte[] data = new byte[length];
+      buf.readBytes(data);
+      message.decode(data, 0, length);
+    }
     return new QpidProtonMessage(
         message,
         createProperties(message),
