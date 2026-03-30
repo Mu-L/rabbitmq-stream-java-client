@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2025 Broadcom. All Rights Reserved.
+// Copyright (c) 2007-2026 Broadcom. All Rights Reserved.
 // The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
 //
 // This software, the RabbitMQ Stream Java client library, is dual-licensed under the
@@ -25,7 +25,7 @@ import com.rabbitmq.stream.Environment;
 import com.rabbitmq.stream.EnvironmentBuilder;
 import com.rabbitmq.stream.ObservationCollector;
 import com.rabbitmq.stream.Producer;
-import com.rabbitmq.stream.codec.QpidProtonCodec;
+import com.rabbitmq.stream.codec.InternalCodec;
 import com.rabbitmq.stream.codec.SwiftMqCodec;
 import com.rabbitmq.stream.impl.TestUtils;
 import io.micrometer.tracing.test.SampleTestRunner;
@@ -117,8 +117,7 @@ public class MicrometerObservationCollectorTest {
 
     @Override
     public SampleTestRunnerConsumer yourCode() {
-      return (buildingBlocks, meterRegistry) ->
-          publishConsume(new QpidProtonCodec(), buildingBlocks);
+      return (buildingBlocks, meterRegistry) -> publishConsume(new InternalCodec(), buildingBlocks);
     }
   }
 

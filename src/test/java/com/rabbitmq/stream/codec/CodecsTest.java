@@ -46,6 +46,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
@@ -63,7 +65,7 @@ public class CodecsTest {
   static UUID TEST_UUID = UUID.randomUUID();
 
   static Iterable<CodecCouple> codecsCouples() {
-    List<Codec> codecs = asList(new QpidProtonCodec(), new SwiftMqCodec());
+    List<Codec> codecs = asList(new QpidProtonCodec(), new SwiftMqCodec(), new InternalCodec());
     List<CodecCouple> couples = new ArrayList<>();
     for (Codec serializer : codecs) {
       for (Codec deserializer : codecs) {
@@ -75,7 +77,7 @@ public class CodecsTest {
   }
 
   static Iterable<CodecCouple> codecsCombinations() {
-    List<Codec> codecs = asList(new QpidProtonCodec(), new SwiftMqCodec());
+    List<Codec> codecs = asList(new QpidProtonCodec(), new SwiftMqCodec(), new InternalCodec());
     List<CodecCouple> couples = new ArrayList<>();
     for (Codec serializer : codecs) {
       for (Codec deserializer : codecs) {
@@ -87,18 +89,22 @@ public class CodecsTest {
 
   static Iterable<Supplier<MessageBuilder>> messageBuilderSuppliers() {
     return asList(
-        QpidProtonMessageBuilder::new, SwiftMqMessageBuilder::new, WrapperMessageBuilder::new);
+        QpidProtonMessageBuilder::new,
+        SwiftMqMessageBuilder::new,
+        WrapperMessageBuilder::new,
+        new InternalCodec()::messageBuilder);
   }
 
   static Iterable<Codec> readCreatedMessage() {
     return asList(
         when(mock(Codec.class).messageBuilder()).thenReturn(new WrapperMessageBuilder()).getMock(),
         new QpidProtonCodec(),
-        new SwiftMqCodec());
+        new SwiftMqCodec(),
+        new InternalCodec());
   }
 
   static Stream<Codec> allAmqpCodecs() {
-    return Stream.of(new QpidProtonCodec(), new SwiftMqCodec());
+    return Stream.of(new QpidProtonCodec(), new SwiftMqCodec(), new InternalCodec());
   }
 
   static Stream<MessageBuilder> messageBuilders() {
@@ -106,7 +112,8 @@ public class CodecsTest {
         new QpidProtonMessageBuilder(),
         new SwiftMqMessageBuilder(),
         new WrapperMessageBuilder(),
-        new SimpleCodec().messageBuilder());
+        new SimpleCodec().messageBuilder(),
+        new InternalCodec().messageBuilder());
   }
 
   @ParameterizedTest
@@ -370,10 +377,15 @@ public class CodecsTest {
               .isNotNull()
               .isInstanceOf(Double.class)
               .isEqualTo(Double.valueOf(6.28));
-          assertThat(inboundMessage.getApplicationProperties().get("char"))
-              .isNotNull()
-              .isInstanceOf(Character.class)
-              .isEqualTo('c');
+          // InternalCodec returns Integer (full Unicode support per AMQP 1.0 spec)
+          // QpidProtonCodec and SwiftMqCodec return Character (16-bit, truncated)
+          Object charValue = inboundMessage.getApplicationProperties().get("char");
+          assertThat(charValue).isNotNull();
+          if (codecCouple.deserializer instanceof InternalCodec) {
+            assertThat(charValue).isInstanceOf(Integer.class).isEqualTo((int) 'c');
+          } else {
+            assertThat(charValue).isInstanceOf(Character.class).isEqualTo('c');
+          }
           assertThat(inboundMessage.getApplicationProperties().get("timestamp"))
               .isNotNull()
               .isInstanceOf(Long.class)
@@ -468,10 +480,16 @@ public class CodecsTest {
               .isNotNull()
               .isInstanceOf(Double.class)
               .isEqualTo(Double.valueOf(6.28));
-          assertThat(inboundMessage.getMessageAnnotations().get("annotations.char"))
-              .isNotNull()
-              .isInstanceOf(Character.class)
-              .isEqualTo('c');
+          // InternalCodec returns Integer (full Unicode support per AMQP 1.0 spec)
+          // QpidProtonCodec and SwiftMqCodec return Character (16-bit, truncated)
+          Object annotationCharValue =
+              inboundMessage.getMessageAnnotations().get("annotations.char");
+          assertThat(annotationCharValue).isNotNull();
+          if (codecCouple.deserializer instanceof InternalCodec) {
+            assertThat(annotationCharValue).isInstanceOf(Integer.class).isEqualTo((int) 'c');
+          } else {
+            assertThat(annotationCharValue).isInstanceOf(Character.class).isEqualTo('c');
+          }
           assertThat(inboundMessage.getMessageAnnotations().get("annotations.timestamp"))
               .isNotNull()
               .isInstanceOf(Long.class)
@@ -527,6 +545,107 @@ public class CodecsTest {
           }
           assertThat(arrayInt).containsExactly(200, 201, 202);
         });
+  }
+
+  @ParameterizedTest
+  @MethodSource("codecsCouples")
+  void codecsLargeComposites(CodecCouple codecCouple) {
+    Codec serializer = codecCouple.serializer;
+    Codec deserializer = codecCouple.deserializer;
+
+    MessageBuilder messageBuilder = codecCouple.messageBuilderSupplier.get();
+
+    List<String> largeList =
+        IntStream.range(0, 30).mapToObj(i -> "list-element-" + i).collect(Collectors.toList());
+    Map<String, Object> largeMap = new LinkedHashMap<>();
+    for (int i = 0; i < 30; i++) {
+      largeMap.put("map-key-" + i, "map-value-" + i);
+    }
+    String[] largeStringArray =
+        IntStream.range(0, 30).mapToObj(i -> "arr-element-" + i).toArray(String[]::new);
+    Integer[] largeIntArray =
+        IntStream.range(0, 30).mapToObj(i -> 1000 + i).toArray(Integer[]::new);
+
+    MessageBuilder.MessageAnnotationsBuilder annotations = messageBuilder.messageAnnotations();
+    annotations
+        .entry("large-list", largeList)
+        .entry("large-map", largeMap)
+        .entryArray("large-string-array", largeStringArray)
+        .entryArray("large-int-array", largeIntArray);
+    for (int i = 0; i < 30; i++) {
+      annotations.entry("annotation-key-" + i, "annotation-value-" + i);
+    }
+
+    MessageBuilder.ApplicationPropertiesBuilder appProps =
+        annotations.messageBuilder().applicationProperties();
+    for (int i = 0; i < 30; i++) {
+      appProps.entry("app-prop-key-" + i, "app-prop-value-" + i);
+    }
+
+    Message outboundMessage =
+        appProps
+            .messageBuilder()
+            .properties()
+            .messageId("large-composites-test")
+            .to("destination")
+            .subject("subject")
+            .contentType("application/octet-stream")
+            .messageBuilder()
+            .addData("large composites body".getBytes(CHARSET))
+            .build();
+
+    Codec.EncodedMessage encoded = serializer.encode(outboundMessage);
+    ByteBuf encodedData = encodedMessageByteBuf(encoded);
+    Message inboundMessage = deserializer.decode(encodedData, encodedData.readableBytes());
+
+    assertThat(new String(inboundMessage.getBodyAsBinary(), CHARSET))
+        .isEqualTo("large composites body");
+    assertThat(inboundMessage.getProperties().getMessageIdAsString())
+        .isEqualTo("large-composites-test");
+    assertThat(inboundMessage.getProperties().getTo()).isEqualTo("destination");
+    assertThat(inboundMessage.getProperties().getSubject()).isEqualTo("subject");
+    assertThat(inboundMessage.getProperties().getContentType())
+        .isEqualTo("application/octet-stream");
+
+    assertThat(inboundMessage.getApplicationProperties()).hasSize(30);
+    for (int i = 0; i < 30; i++) {
+      assertThat(inboundMessage.getApplicationProperties().get("app-prop-key-" + i))
+          .isEqualTo("app-prop-value-" + i);
+    }
+
+    assertThat(inboundMessage.getMessageAnnotations()).hasSizeGreaterThanOrEqualTo(30 + 4);
+    for (int i = 0; i < 30; i++) {
+      assertThat(inboundMessage.getMessageAnnotations().get("annotation-key-" + i))
+          .isEqualTo("annotation-value-" + i);
+    }
+
+    List<?> decodedList = (List<?>) inboundMessage.getMessageAnnotations().get("large-list");
+    assertThat(decodedList).hasSize(30);
+    assertThat(decodedList.get(0)).isEqualTo("list-element-0");
+    assertThat(decodedList.get(29)).isEqualTo("list-element-29");
+
+    Map<?, ?> decodedMap = (Map<?, ?>) inboundMessage.getMessageAnnotations().get("large-map");
+    assertThat(decodedMap).hasSize(30);
+    assertThat(decodedMap.get("map-key-0")).isEqualTo("map-value-0");
+    assertThat(decodedMap.get("map-key-29")).isEqualTo("map-value-29");
+
+    Object[] decodedStringArray =
+        (Object[]) inboundMessage.getMessageAnnotations().get("large-string-array");
+    assertThat(decodedStringArray).hasSize(30);
+    assertThat(decodedStringArray[0]).isEqualTo("arr-element-0");
+    assertThat(decodedStringArray[29]).isEqualTo("arr-element-29");
+
+    int[] decodedIntArray;
+    Object rawIntArray = inboundMessage.getMessageAnnotations().get("large-int-array");
+    if (rawIntArray instanceof Integer[]) {
+      decodedIntArray =
+          Arrays.stream((Integer[]) rawIntArray).mapToInt(Integer::intValue).toArray();
+    } else {
+      decodedIntArray = (int[]) rawIntArray;
+    }
+    assertThat(decodedIntArray).hasSize(30);
+    assertThat(decodedIntArray[0]).isEqualTo(1000);
+    assertThat(decodedIntArray[29]).isEqualTo(1029);
   }
 
   @ParameterizedTest

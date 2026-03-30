@@ -46,7 +46,11 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 @Threads(1)
 public class EncodingDecodingBenchmark {
 
-  @Param({"com.rabbitmq.stream.codec.QpidProtonCodec", "com.rabbitmq.stream.codec.SwiftMqCodec"})
+  @Param({
+    "com.rabbitmq.stream.codec.QpidProtonCodec",
+    "com.rabbitmq.stream.codec.SwiftMqCodec",
+    "com.rabbitmq.stream.codec.InternalCodec"
+  })
   String codecClass;
 
   @Param({"20"})

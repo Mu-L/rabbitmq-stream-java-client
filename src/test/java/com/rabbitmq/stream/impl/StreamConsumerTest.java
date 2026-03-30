@@ -1172,8 +1172,8 @@ public class StreamConsumerTest {
       env.consumerBuilder().offset(OffsetSpecification.first()).stream(stream)
           .messageHandler(
               (context, message) -> {
-                sync.down();
                 msg.set(message);
+                sync.down();
               })
           .build();
       assertThat(sync).completes();

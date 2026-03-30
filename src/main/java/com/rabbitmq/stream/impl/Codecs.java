@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2025 Broadcom. All Rights Reserved.
+// Copyright (c) 2020-2026 Broadcom. All Rights Reserved.
 // The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
 //
 // This software, the RabbitMQ Stream Java client library, is dual-licensed under the
@@ -30,9 +30,9 @@ final class Codecs {
   private static Codec instanciateDefault() {
     try {
       return (Codec)
-          Class.forName("com.rabbitmq.stream.codec.QpidProtonCodec").getConstructor().newInstance();
+          Class.forName("com.rabbitmq.stream.codec.InternalCodec").getConstructor().newInstance();
     } catch (Exception e) {
-      throw new StreamException("Error while creating QPid Proton codec", e);
+      throw new StreamException("Error while creating internal codec", e);
     }
   }
 }

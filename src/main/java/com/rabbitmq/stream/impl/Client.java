@@ -2178,7 +2178,8 @@ public class Client implements AutoCloseable {
       this.buffer = allocator.buffer(maxCompressedLength);
       try (OutputStream outputStream = this.codec.compress(new ByteBufOutputStream(buffer))) {
         for (int i = 0; i < messages.size(); i++) {
-          messages.get(i).writeTo(outputStream);
+          EncodedMessage message = messages.get(i);
+          message.writeTo(outputStream);
         }
         outputStream.flush();
       } catch (Throwable e) {

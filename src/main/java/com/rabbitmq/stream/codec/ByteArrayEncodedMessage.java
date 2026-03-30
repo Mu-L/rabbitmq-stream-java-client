@@ -20,7 +20,7 @@ import io.netty.buffer.ByteBuf;
 import java.io.IOException;
 import java.io.OutputStream;
 
-public class ByteArrayEncodedMessage implements Codec.EncodedMessage {
+public final class ByteArrayEncodedMessage implements Codec.EncodedMessage {
 
   private final int size;
   private final byte[] data;

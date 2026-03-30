@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2025 Broadcom. All Rights Reserved.
+// Copyright (c) 2020-2026 Broadcom. All Rights Reserved.
 // The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
 //
 // This software, the RabbitMQ Stream Java client library, is dual-licensed under the
@@ -14,9 +14,12 @@
 // info@rabbitmq.com.
 package com.rabbitmq.stream.amqp;
 
-public class Symbol {
+import java.util.concurrent.ConcurrentHashMap;
 
-  // FIXME maintain a cache
+public final class Symbol {
+
+  private static final int CACHE_MAX_SIZE = 2048;
+  private static final ConcurrentHashMap<String, Symbol> CACHE = new ConcurrentHashMap<>(64);
 
   private final String value;
 
@@ -25,11 +28,40 @@ public class Symbol {
   }
 
   public static Symbol valueOf(String value) {
-    return new Symbol(value);
+    if (value == null) {
+      return null;
+    }
+    Symbol symbol = CACHE.get(value);
+    if (symbol == null) {
+      symbol = new Symbol(value);
+      if (CACHE.size() < CACHE_MAX_SIZE) {
+        Symbol existing = CACHE.putIfAbsent(value, symbol);
+        if (existing != null) {
+          symbol = existing;
+        }
+      }
+    }
+    return symbol;
   }
 
   @Override
   public String toString() {
     return value;
+  }
+
+  @Override
+  public int hashCode() {
+    return value.hashCode();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    return value.equals(((Symbol) o).value);
   }
 }

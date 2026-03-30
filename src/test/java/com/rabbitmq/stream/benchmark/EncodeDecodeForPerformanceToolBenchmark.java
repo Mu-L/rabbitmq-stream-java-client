@@ -49,7 +49,8 @@ public class EncodeDecodeForPerformanceToolBenchmark {
   @Param({
     "com.rabbitmq.stream.codec.QpidProtonCodec",
     "com.rabbitmq.stream.codec.SwiftMqCodec",
-    "com.rabbitmq.stream.codec.SimpleCodec"
+    "com.rabbitmq.stream.codec.SimpleCodec",
+    "com.rabbitmq.stream.codec.InternalCodec"
   })
   String codecClass;
 
