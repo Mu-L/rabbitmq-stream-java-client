@@ -845,7 +845,7 @@ final class Amqp10 {
       case 9: // creation-time: timestamp
         return sizeOfTimestamp((Long) value);
       case 11: // group-sequence: sequence-no (uint)
-        return sizeOfUInt(((Long) value).intValue());
+        return sizeOfUInt(toUInt((Long) value));
       default:
         return sizeOfNull();
     }
@@ -1021,8 +1021,8 @@ final class Amqp10 {
       encodeMessageIdOrCorrelationId(props.getCorrelationId()), // 5: correlation-id
       props.getContentType(), // 6: content-type (symbol)
       props.getContentEncoding(), // 7: content-encoding (symbol)
-      props.getAbsoluteExpiryTime() > 0 ? props.getAbsoluteExpiryTime() : null, // 8
-      props.getCreationTime() > 0 ? props.getCreationTime() : null, // 9
+      props.getAbsoluteExpiryTime() != 0 ? props.getAbsoluteExpiryTime() : null, // 8
+      props.getCreationTime() != 0 ? props.getCreationTime() : null, // 9
       props.getGroupId(), // 10: group-id (string)
       props.getGroupSequence() >= 0 ? props.getGroupSequence() : null, // 11: group-sequence
       props.getReplyToGroupId() // 12: reply-to-group-id (string)
@@ -1036,6 +1036,14 @@ final class Amqp10 {
       }
     }
     return -1;
+  }
+
+  private static int toUInt(long value) {
+    if (value < 0 || value > 0xFFFFFFFFL) {
+      throw new IllegalArgumentException(
+          "Value " + value + " is outside the uint range [0, " + 0xFFFFFFFFL + "]");
+    }
+    return (int) value;
   }
 
   private static Object encodeMessageIdOrCorrelationId(Object id) {
@@ -1081,7 +1089,7 @@ final class Amqp10 {
         writeTimestamp(buf, (Long) value);
         break;
       case 11: // group-sequence: sequence-no (uint)
-        writeUInt(buf, ((Long) value).intValue());
+        writeUInt(buf, toUInt((Long) value));
         break;
       default:
         writeNull(buf);

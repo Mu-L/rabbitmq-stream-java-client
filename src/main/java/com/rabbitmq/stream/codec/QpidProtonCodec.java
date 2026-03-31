@@ -197,12 +197,12 @@ public class QpidProtonCodec implements Codec {
           propertiesSet = true;
         }
 
-        if (headers.getAbsoluteExpiryTime() > 0) {
+        if (headers.getAbsoluteExpiryTime() != 0) {
           properties.setAbsoluteExpiryTime(new Date(headers.getAbsoluteExpiryTime()));
           propertiesSet = true;
         }
 
-        if (headers.getCreationTime() > 0) {
+        if (headers.getCreationTime() != 0) {
           properties.setCreationTime(new Date(headers.getCreationTime()));
           propertiesSet = true;
         }

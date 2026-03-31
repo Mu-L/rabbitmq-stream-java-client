@@ -275,12 +275,12 @@ public class SwiftMqCodec implements Codec {
           propertiesSet = true;
         }
 
-        if (headers.getAbsoluteExpiryTime() > 0) {
+        if (headers.getAbsoluteExpiryTime() != 0) {
           properties.setAbsoluteExpiryTime(new AMQPTimestamp(headers.getAbsoluteExpiryTime()));
           propertiesSet = true;
         }
 
-        if (headers.getCreationTime() > 0) {
+        if (headers.getCreationTime() != 0) {
           properties.setCreationTime(new AMQPTimestamp(headers.getCreationTime()));
           propertiesSet = true;
         }
