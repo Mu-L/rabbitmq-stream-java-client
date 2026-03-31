@@ -294,6 +294,93 @@ public class InternalCodecTest {
   }
 
   @Test
+  void multiByteUtf8StringRoundTrip() {
+    // 2-byte UTF-8 characters (Latin Extended, U+00E0..U+00FF): each char = 2 bytes
+    // 128 such chars = 256 UTF-8 bytes, forcing STR32 despite only 128 characters
+    String twoByteChars = "\u00E9".repeat(128);
+    assertThat(twoByteChars.length()).isEqualTo(128);
+    assertThat(twoByteChars.getBytes(java.nio.charset.StandardCharsets.UTF_8).length)
+        .isEqualTo(256);
+
+    // 3-byte UTF-8 characters (CJK, U+4E00): each char = 3 bytes
+    String threeByteChars = "\u4E00".repeat(86);
+    assertThat(threeByteChars.getBytes(java.nio.charset.StandardCharsets.UTF_8).length)
+        .isEqualTo(258);
+
+    // 4-byte UTF-8 characters (emoji, U+1F600): each code point = 4 bytes, 2 Java chars
+    String fourByteChars = new String(Character.toChars(0x1F600)).repeat(64);
+    assertThat(fourByteChars.getBytes(java.nio.charset.StandardCharsets.UTF_8).length)
+        .isEqualTo(256);
+
+    Message msg =
+        CODEC
+            .messageBuilder()
+            .applicationProperties()
+            .entry("two-byte", twoByteChars)
+            .entry("three-byte", threeByteChars)
+            .entry("four-byte", fourByteChars)
+            .messageBuilder()
+            .addData("x".getBytes())
+            .build();
+
+    Message decoded = encodeDecode(msg);
+    assertThat(decoded.getApplicationProperties().get("two-byte")).isEqualTo(twoByteChars);
+    assertThat(decoded.getApplicationProperties().get("three-byte")).isEqualTo(threeByteChars);
+    assertThat(decoded.getApplicationProperties().get("four-byte")).isEqualTo(fourByteChars);
+  }
+
+  @Test
+  void multiByteUtf8StringAtStr8Str32Boundary() {
+    // Exactly 255 UTF-8 bytes: should use STR8
+    String justUnder = "\u00E9".repeat(127) + "x";
+    assertThat(justUnder.getBytes(java.nio.charset.StandardCharsets.UTF_8).length).isEqualTo(255);
+
+    // Exactly 256 UTF-8 bytes: must use STR32
+    String justOver = "\u00E9".repeat(128);
+    assertThat(justOver.getBytes(java.nio.charset.StandardCharsets.UTF_8).length).isEqualTo(256);
+
+    Message msg =
+        CODEC
+            .messageBuilder()
+            .applicationProperties()
+            .entry("str8", justUnder)
+            .entry("str32", justOver)
+            .messageBuilder()
+            .addData("x".getBytes())
+            .build();
+
+    Message decoded = encodeDecode(msg);
+    assertThat(decoded.getApplicationProperties().get("str8")).isEqualTo(justUnder);
+    assertThat(decoded.getApplicationProperties().get("str32")).isEqualTo(justOver);
+  }
+
+  @Test
+  void multiByteUtf8InPropertiesRoundTrip() {
+    String twoByteStr = "\u00E9".repeat(128);
+    String threeByteStr = "\u4E00".repeat(86);
+
+    Message msg =
+        CODEC
+            .messageBuilder()
+            .properties()
+            .messageId(twoByteStr)
+            .to(threeByteStr)
+            .subject(twoByteStr)
+            .correlationId(threeByteStr)
+            .groupId(twoByteStr)
+            .messageBuilder()
+            .addData("x".getBytes())
+            .build();
+
+    Message decoded = encodeDecode(msg);
+    assertThat(decoded.getProperties().getMessageIdAsString()).isEqualTo(twoByteStr);
+    assertThat(decoded.getProperties().getTo()).isEqualTo(threeByteStr);
+    assertThat(decoded.getProperties().getSubject()).isEqualTo(twoByteStr);
+    assertThat(decoded.getProperties().getCorrelationIdAsString()).isEqualTo(threeByteStr);
+    assertThat(decoded.getProperties().getGroupId()).isEqualTo(twoByteStr);
+  }
+
+  @Test
   void largePropertiesRoundTrip() {
     String longString = "x".repeat(300);
     Message msg =

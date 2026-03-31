@@ -435,6 +435,52 @@ public class StreamingEncodedMessageTest {
     assertSizeMatchesEncoding(message);
   }
 
+  @Test
+  void sizeCalculationShouldBeExactForMultiByteUtf8Strings() {
+    // 2-byte UTF-8 at the STR8/STR32 boundary
+    String twoByteStr = "\u00E9".repeat(128); // 256 bytes, forces STR32
+    String str8Boundary = "\u00E9".repeat(127) + "x"; // 255 bytes, stays in STR8
+    // 3-byte UTF-8
+    String threeByteStr = "\u4E00".repeat(86); // 258 bytes
+    // 4-byte UTF-8
+    String fourByteStr = new String(Character.toChars(0x1F600)).repeat(64); // 256 bytes
+
+    Message message =
+        CODEC
+            .messageBuilder()
+            .applicationProperties()
+            .entry("two-byte", twoByteStr)
+            .entry("str8-boundary", str8Boundary)
+            .entry("three-byte", threeByteStr)
+            .entry("four-byte", fourByteStr)
+            .messageBuilder()
+            .addData("x".getBytes())
+            .build();
+
+    assertSizeMatchesEncoding(message);
+  }
+
+  @Test
+  void sizeCalculationShouldBeExactForMultiByteUtf8Properties() {
+    String twoByteStr = "\u00E9".repeat(128);
+    String threeByteStr = "\u4E00".repeat(86);
+
+    Message message =
+        CODEC
+            .messageBuilder()
+            .properties()
+            .messageId(twoByteStr)
+            .to(threeByteStr)
+            .subject(twoByteStr)
+            .correlationId(threeByteStr)
+            .groupId(twoByteStr)
+            .messageBuilder()
+            .addData("x".getBytes())
+            .build();
+
+    assertSizeMatchesEncoding(message);
+  }
+
   private void assertSizeMatchesEncoding(Message message) {
     Codec.EncodedMessage encoded = CODEC.encode(message);
     encoded.writeTo(buf);

@@ -649,6 +649,51 @@ public class CodecsTest {
   }
 
   @ParameterizedTest
+  @MethodSource("codecsCouples")
+  void codecsMultiByteUtf8(CodecCouple codecCouple) {
+    Codec serializer = codecCouple.serializer;
+    Codec deserializer = codecCouple.deserializer;
+
+    // 2-byte UTF-8 chars at the STR8/STR32 boundary (128 * 2 = 256 bytes, forces STR32)
+    String twoByteStr = "\u00E9".repeat(128);
+    // 3-byte UTF-8 chars (CJK ideographs, 86 * 3 = 258 bytes)
+    String threeByteStr = "\u4E00".repeat(86);
+    // 4-byte UTF-8 chars (emoji, 64 * 4 = 256 bytes)
+    String fourByteStr = new String(Character.toChars(0x1F600)).repeat(64);
+    // Exactly 255 UTF-8 bytes: stays in STR8
+    String str8Boundary = "\u00E9".repeat(127) + "x";
+
+    MessageBuilder messageBuilder = codecCouple.messageBuilderSupplier.get();
+    Message outboundMessage =
+        messageBuilder
+            .applicationProperties()
+            .entry("two-byte", twoByteStr)
+            .entry("three-byte", threeByteStr)
+            .entry("four-byte", fourByteStr)
+            .entry("str8-boundary", str8Boundary)
+            .messageBuilder()
+            .properties()
+            .messageId(twoByteStr)
+            .subject(threeByteStr)
+            .messageBuilder()
+            .addData("body".getBytes(CHARSET))
+            .build();
+
+    Codec.EncodedMessage encoded = serializer.encode(outboundMessage);
+    ByteBuf encodedData = encodedMessageByteBuf(encoded);
+    Message inboundMessage = deserializer.decode(encodedData, encodedData.readableBytes());
+
+    assertThat(inboundMessage.getApplicationProperties().get("two-byte")).isEqualTo(twoByteStr);
+    assertThat(inboundMessage.getApplicationProperties().get("three-byte")).isEqualTo(threeByteStr);
+    assertThat(inboundMessage.getApplicationProperties().get("four-byte")).isEqualTo(fourByteStr);
+    assertThat(inboundMessage.getApplicationProperties().get("str8-boundary"))
+        .isEqualTo(str8Boundary);
+    assertThat(inboundMessage.getProperties().getMessageIdAsString()).isEqualTo(twoByteStr);
+    assertThat(inboundMessage.getProperties().getSubject()).isEqualTo(threeByteStr);
+    assertThat(new String(inboundMessage.getBodyAsBinary(), CHARSET)).isEqualTo("body");
+  }
+
+  @ParameterizedTest
   @MethodSource
   void readCreatedMessage(Codec codec) {
     // same conversion logic as for encoding/decoding, so not testing all types
