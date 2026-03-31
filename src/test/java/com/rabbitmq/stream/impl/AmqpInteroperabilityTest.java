@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2025 Broadcom. All Rights Reserved.
+// Copyright (c) 2020-2026 Broadcom. All Rights Reserved.
 // The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
 //
 // This software, the RabbitMQ Stream Java client library, is dual-licensed under the
@@ -36,6 +36,7 @@ import com.rabbitmq.stream.Message;
 import com.rabbitmq.stream.MessageBuilder;
 import com.rabbitmq.stream.OffsetSpecification;
 import com.rabbitmq.stream.amqp.UnsignedByte;
+import com.rabbitmq.stream.codec.InternalCodec;
 import com.rabbitmq.stream.codec.QpidProtonCodec;
 import com.rabbitmq.stream.codec.SwiftMqCodec;
 import com.rabbitmq.stream.impl.Client.ClientParameters;
@@ -74,7 +75,7 @@ public class AmqpInteroperabilityTest {
   String brokerVersion;
 
   static Stream<Codec> codecs() {
-    return Stream.of(new QpidProtonCodec(), new SwiftMqCodec());
+    return Stream.of(new QpidProtonCodec(), new SwiftMqCodec(), new InternalCodec());
   }
 
   private static HeaderTestConfiguration htc(

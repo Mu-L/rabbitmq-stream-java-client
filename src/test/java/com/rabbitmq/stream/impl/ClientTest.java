@@ -37,7 +37,7 @@ import com.rabbitmq.stream.MessageBuilder;
 import com.rabbitmq.stream.OffsetSpecification;
 import com.rabbitmq.stream.Properties;
 import com.rabbitmq.stream.StreamException;
-import com.rabbitmq.stream.codec.QpidProtonCodec;
+import com.rabbitmq.stream.codec.InternalCodec;
 import com.rabbitmq.stream.codec.SimpleCodec;
 import com.rabbitmq.stream.codec.SwiftMqCodec;
 import com.rabbitmq.stream.impl.Client.ClientParameters;
@@ -374,8 +374,8 @@ public class ClientTest {
   }
 
   @Test
-  void publishConsumeComplexMessageWithMessageBuilderAndQpidProtonCodec() {
-    Codec codec = new QpidProtonCodec();
+  void publishConsumeComplexMessageWithMessageBuilderAndInternalCodec() {
+    Codec codec = new InternalCodec();
     Client publisher = cf.get(new Client.ClientParameters().codec(codec));
     publishConsumeComplexMessage(
         publisher,
@@ -1038,8 +1038,7 @@ public class ClientTest {
             bb.writeShort(msg.filterValue.length());
             bb.writeBytes(msg.filterValue.getBytes(StandardCharsets.UTF_8));
             Codec.EncodedMessage messageToPublish = msg.encodedMessage;
-            bb.writeInt(messageToPublish.getSize());
-            bb.writeBytes(messageToPublish.getData(), 0, messageToPublish.getSize());
+            messageToPublish.writeTo(bb);
             return 1;
           }
 

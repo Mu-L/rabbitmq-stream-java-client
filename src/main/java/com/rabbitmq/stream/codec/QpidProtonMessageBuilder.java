@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2025 Broadcom. All Rights Reserved.
+// Copyright (c) 2020-2026 Broadcom. All Rights Reserved.
 // The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
 //
 // This software, the RabbitMQ Stream Java client library, is dual-licensed under the
@@ -127,7 +127,7 @@ class QpidProtonMessageBuilder implements MessageBuilder {
 
     @Override
     public PropertiesBuilder messageId(long id) {
-      properties.setMessageId(new UnsignedLong(id));
+      properties.setMessageId(UnsignedLong.valueOf(id));
       return this;
     }
 
@@ -175,7 +175,7 @@ class QpidProtonMessageBuilder implements MessageBuilder {
 
     @Override
     public PropertiesBuilder correlationId(long correlationId) {
-      properties.setCorrelationId(new UnsignedLong(correlationId));
+      properties.setCorrelationId(UnsignedLong.valueOf(correlationId));
       return this;
     }
 
@@ -281,25 +281,25 @@ class QpidProtonMessageBuilder implements MessageBuilder {
 
     @Override
     public MessageAnnotationsBuilder entryUnsigned(String key, byte value) {
-      messageAnnotations.put(Symbol.getSymbol(key), new UnsignedByte(value));
+      messageAnnotations.put(Symbol.getSymbol(key), UnsignedByte.valueOf(value));
       return this;
     }
 
     @Override
     public MessageAnnotationsBuilder entryUnsigned(String key, short value) {
-      messageAnnotations.put(Symbol.getSymbol(key), new UnsignedShort(value));
+      messageAnnotations.put(Symbol.getSymbol(key), UnsignedShort.valueOf(value));
       return this;
     }
 
     @Override
     public MessageAnnotationsBuilder entryUnsigned(String key, int value) {
-      messageAnnotations.put(Symbol.getSymbol(key), new UnsignedInteger(value));
+      messageAnnotations.put(Symbol.getSymbol(key), UnsignedInteger.valueOf(value));
       return this;
     }
 
     @Override
     public MessageAnnotationsBuilder entryUnsigned(String key, long value) {
-      messageAnnotations.put(Symbol.getSymbol(key), new UnsignedLong(value));
+      messageAnnotations.put(Symbol.getSymbol(key), UnsignedLong.valueOf(value));
       return this;
     }
 
@@ -432,25 +432,25 @@ class QpidProtonMessageBuilder implements MessageBuilder {
 
     @Override
     public ApplicationPropertiesBuilder entryUnsigned(String key, byte value) {
-      applicationProperties.put(key, new UnsignedByte(value));
+      applicationProperties.put(key, UnsignedByte.valueOf(value));
       return this;
     }
 
     @Override
     public ApplicationPropertiesBuilder entryUnsigned(String key, short value) {
-      applicationProperties.put(key, new UnsignedShort(value));
+      applicationProperties.put(key, UnsignedShort.valueOf(value));
       return this;
     }
 
     @Override
     public ApplicationPropertiesBuilder entryUnsigned(String key, int value) {
-      applicationProperties.put(key, new UnsignedInteger(value));
+      applicationProperties.put(key, UnsignedInteger.valueOf(value));
       return this;
     }
 
     @Override
     public ApplicationPropertiesBuilder entryUnsigned(String key, long value) {
-      applicationProperties.put(key, new UnsignedLong(value));
+      applicationProperties.put(key, UnsignedLong.valueOf(value));
       return this;
     }
 

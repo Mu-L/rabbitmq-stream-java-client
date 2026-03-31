@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2025 Broadcom. All Rights Reserved.
+// Copyright (c) 2007-2026 Broadcom. All Rights Reserved.
 // The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
 //
 // This software, the RabbitMQ Stream Java client library, is dual-licensed under the
@@ -17,6 +17,7 @@ package com.rabbitmq.stream.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.rabbitmq.stream.Codec.EncodedMessage;
+import com.rabbitmq.stream.codec.ByteArrayEncodedMessage;
 import com.rabbitmq.stream.compression.CompressionCodec;
 import com.rabbitmq.stream.compression.CompressionUtils.CommonsCompressGzipCompressionCodec;
 import com.rabbitmq.stream.compression.CompressionUtils.CommonsCompressLz4CompressionCodec;
@@ -80,7 +81,7 @@ public class CompressionCodecsTest {
         .forEach(
             i -> {
               byte[] body = ("message " + i).getBytes(StandardCharsets.UTF_8);
-              EncodedMessage encodedMessage = new EncodedMessage(body.length, body);
+              EncodedMessage encodedMessage = new ByteArrayEncodedMessage(body.length, body);
               encodedMessageBatch.add(encodedMessage);
               encodedMessages.add(encodedMessage);
             });
@@ -110,7 +111,7 @@ public class CompressionCodecsTest {
       int size = outBb.readInt();
       byte[] msg = new byte[size];
       outBb.readBytes(msg);
-      decompressedMessages.add(new EncodedMessage(size, msg));
+      decompressedMessages.add(new ByteArrayEncodedMessage(size, msg));
     }
 
     assertThat(decompressedMessages).hasSameSizeAs(encodedMessages);
@@ -120,7 +121,8 @@ public class CompressionCodecsTest {
               EncodedMessage originalMessage = encodedMessages.get(i);
               EncodedMessage decompressedMessage = decompressedMessages.get(i);
               assertThat(decompressedMessage.getSize()).isEqualTo(originalMessage.getSize());
-              assertThat(decompressedMessage.getData()).isEqualTo(originalMessage.getData());
+              assertThat(TestUtils.encodedMessageByteBuf(decompressedMessage))
+                  .isEqualTo(TestUtils.encodedMessageByteBuf(originalMessage));
             });
 
     destinationBb.release();

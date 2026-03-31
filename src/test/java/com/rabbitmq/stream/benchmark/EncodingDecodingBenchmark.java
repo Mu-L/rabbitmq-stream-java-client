@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2025 Broadcom. All Rights Reserved.
+// Copyright (c) 2020-2026 Broadcom. All Rights Reserved.
 // The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
 //
 // This software, the RabbitMQ Stream Java client library, is dual-licensed under the
@@ -14,7 +14,10 @@
 // info@rabbitmq.com.
 package com.rabbitmq.stream.benchmark;
 
+import static com.rabbitmq.stream.impl.TestUtils.encodedMessageByteBuf;
+
 import com.rabbitmq.stream.Codec;
+import io.netty.buffer.ByteBuf;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -43,7 +46,11 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 @Threads(1)
 public class EncodingDecodingBenchmark {
 
-  @Param({"com.rabbitmq.stream.codec.QpidProtonCodec", "com.rabbitmq.stream.codec.SwiftMqCodec"})
+  @Param({
+    "com.rabbitmq.stream.codec.QpidProtonCodec",
+    "com.rabbitmq.stream.codec.SwiftMqCodec",
+    "com.rabbitmq.stream.codec.InternalCodec"
+  })
   String codecClass;
 
   @Param({"20"})
@@ -52,7 +59,7 @@ public class EncodingDecodingBenchmark {
   Codec codec;
   byte[] payload;
 
-  byte[] messageToDecode;
+  ByteBuf messageToDecode;
 
   @Setup
   public void setUp() throws Exception {
@@ -70,8 +77,7 @@ public class EncodingDecodingBenchmark {
                 .addData(payload)
                 .build());
 
-    messageToDecode = new byte[encoded.getSize()];
-    System.arraycopy(encoded.getData(), 0, messageToDecode, 0, encoded.getSize());
+    messageToDecode = encodedMessageByteBuf(encoded);
   }
 
   @Benchmark
@@ -88,7 +94,9 @@ public class EncodingDecodingBenchmark {
 
   @Benchmark
   public void decode() {
-    codec.decode(messageToDecode);
+    messageToDecode.markReaderIndex();
+    codec.decode(messageToDecode, messageToDecode.readableBytes());
+    messageToDecode.resetReaderIndex();
   }
 
   public static void main(String[] args) throws RunnerException {

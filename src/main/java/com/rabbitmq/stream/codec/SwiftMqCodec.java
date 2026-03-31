@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2025 Broadcom. All Rights Reserved.
+// Copyright (c) 2020-2026 Broadcom. All Rights Reserved.
 // The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
 //
 // This software, the RabbitMQ Stream Java client library, is dual-licensed under the
@@ -57,6 +57,7 @@ import com.swiftmq.amqp.v100.types.AMQPUnsignedLong;
 import com.swiftmq.amqp.v100.types.AMQPUnsignedShort;
 import com.swiftmq.amqp.v100.types.AMQPUuid;
 import com.swiftmq.tools.util.DataByteArrayOutputStream;
+import io.netty.buffer.ByteBuf;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.nio.charset.StandardCharsets;
@@ -274,12 +275,12 @@ public class SwiftMqCodec implements Codec {
           propertiesSet = true;
         }
 
-        if (headers.getAbsoluteExpiryTime() > 0) {
+        if (headers.getAbsoluteExpiryTime() != 0) {
           properties.setAbsoluteExpiryTime(new AMQPTimestamp(headers.getAbsoluteExpiryTime()));
           propertiesSet = true;
         }
 
-        if (headers.getCreationTime() > 0) {
+        if (headers.getCreationTime() != 0) {
           properties.setCreationTime(new AMQPTimestamp(headers.getCreationTime()));
           propertiesSet = true;
         }
@@ -351,7 +352,7 @@ public class SwiftMqCodec implements Codec {
       }
       DataByteArrayOutputStream output = new DataByteArrayOutputStream(bufferSize);
       outboundMessage.writeContent(output);
-      return new EncodedMessage(output.getCount(), output.getBuffer());
+      return new ByteArrayEncodedMessage(output.getCount(), output.getBuffer());
     } catch (IOException e) {
       throw new StreamException("Error while writing AMQP 1.0 message to output stream", e);
     }
@@ -501,7 +502,9 @@ public class SwiftMqCodec implements Codec {
   }
 
   @Override
-  public Message decode(byte[] data) {
+  public Message decode(ByteBuf buf, int length) {
+    byte[] data = new byte[length];
+    buf.readBytes(data);
     return createMessage(data);
   }
 

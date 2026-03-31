@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2025 Broadcom. All Rights Reserved.
+// Copyright (c) 2020-2026 Broadcom. All Rights Reserved.
 // The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
 //
 // This software, the RabbitMQ Stream Java client library, is dual-licensed under the
@@ -14,7 +14,9 @@
 // info@rabbitmq.com.
 package com.rabbitmq.stream;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import io.netty.buffer.ByteBuf;
+import java.io.IOException;
+import java.io.OutputStream;
 
 /**
  * Codec to encode and decode messages.
@@ -27,28 +29,16 @@ public interface Codec {
 
   EncodedMessage encode(Message message);
 
-  Message decode(byte[] data);
+  Message decode(ByteBuf buf, int length);
 
   MessageBuilder messageBuilder();
 
-  class EncodedMessage {
+  interface EncodedMessage {
 
-    private final int size;
-    private final byte[] data;
+    void writeTo(OutputStream outputStream) throws IOException;
 
-    @SuppressFBWarnings("EI_EXPOSE_REP2")
-    public EncodedMessage(int size, byte[] data) {
-      this.size = size;
-      this.data = data;
-    }
+    void writeTo(ByteBuf buf);
 
-    @SuppressFBWarnings("EI_EXPOSE_REP")
-    public byte[] getData() {
-      return data;
-    }
-
-    public int getSize() {
-      return size;
-    }
+    int getSize();
   }
 }

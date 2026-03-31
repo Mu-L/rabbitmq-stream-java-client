@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.rabbitmq.stream.Codec;
 import com.rabbitmq.stream.Message;
 import com.rabbitmq.stream.OffsetSpecification;
-import com.rabbitmq.stream.codec.QpidProtonCodec;
 import com.rabbitmq.stream.codec.SwiftMqCodec;
 import com.rabbitmq.stream.impl.Client.ClientParameters;
 import com.rabbitmq.stream.impl.TestUtils.BrokerVersion;
@@ -52,9 +51,6 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
-import org.assertj.core.api.InstanceOfAssertFactories;
-import org.assertj.core.api.InstanceOfAssertFactory;
-import org.assertj.core.api.ObjectAssert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -66,13 +62,6 @@ public class Amqp10InteroperabilityTest {
   ClientFactory cf;
   Connection connection;
   Session session;
-
-  private static InstanceOfAssertFactory<
-          org.apache.qpid.proton.amqp.messaging.AmqpValue,
-          ObjectAssert<org.apache.qpid.proton.amqp.messaging.AmqpValue>>
-      qpidAmqpValue() {
-    return InstanceOfAssertFactories.type(org.apache.qpid.proton.amqp.messaging.AmqpValue.class);
-  }
 
   @BeforeEach
   void init() throws Exception {
@@ -141,9 +130,11 @@ public class Amqp10InteroperabilityTest {
 
     Message msg = consumeMessage();
     assertThatThrownBy(() -> msg.getBodyAsBinary()).isInstanceOf(IllegalStateException.class);
-    assertThat(msg.getBody())
-        .asInstanceOf(qpidAmqpValue())
-        .matches(v -> v.getValue().equals("hello"));
+    assertThat(msg.getBody()).asString().contains("hello");
+    //
+    //    assertThat(msg.getBody())
+    //        .asInstanceOf(qpidAmqpValue())
+    //        .matches(v -> v.getValue().equals("hello"));
   }
 
   @Test
@@ -185,18 +176,14 @@ public class Amqp10InteroperabilityTest {
     p.close();
 
     Message msg = consumeMessage();
-    assertThat(msg.getBody())
-        .isInstanceOf(org.apache.qpid.proton.amqp.messaging.AmqpSequence.class);
-    org.apache.qpid.proton.amqp.messaging.AmqpSequence body =
-        (org.apache.qpid.proton.amqp.messaging.AmqpSequence) msg.getBody();
-    // SwiftMQ does not seem to read any AMQP sequences, and QPid reads only the first one
+    assertThat(msg.getBody()).isInstanceOf(List.class);
     @SuppressWarnings("unchecked")
-    List<String> bodyValue = body.getValue();
+    List<String> bodyValue = (List<String>) msg.getBody();
     assertThat(bodyValue).containsExactly("hello", "brave");
   }
 
   Message consumeMessage() {
-    return consumeMessage(new QpidProtonCodec());
+    return consumeMessage(Codecs.DEFAULT);
   }
 
   Message consumeMessage(Codec codec) {

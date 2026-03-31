@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2025 Broadcom. All Rights Reserved.
+// Copyright (c) 2020-2026 Broadcom. All Rights Reserved.
 // The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
 //
 // This software, the RabbitMQ Stream Java client library, is dual-licensed under the
@@ -19,6 +19,7 @@ import com.rabbitmq.stream.Message;
 import com.rabbitmq.stream.MessageBuilder;
 import com.rabbitmq.stream.Properties;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import io.netty.buffer.ByteBuf;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -29,11 +30,13 @@ public class SimpleCodec implements Codec {
   @Override
   public EncodedMessage encode(Message message) {
     byte[] body = message.getBodyAsBinary() == null ? EMPTY_BODY : message.getBodyAsBinary();
-    return new EncodedMessage(body.length, body);
+    return new ByteArrayEncodedMessage(body.length, body);
   }
 
   @Override
-  public Message decode(byte[] data) {
+  public Message decode(ByteBuf buf, int length) {
+    byte[] data = new byte[length];
+    buf.readBytes(data);
     return new SimpleMessage(false, 0, data);
   }
 

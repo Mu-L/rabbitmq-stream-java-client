@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2025 Broadcom. All Rights Reserved.
+// Copyright (c) 2020-2026 Broadcom. All Rights Reserved.
 // The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
 //
 // This software, the RabbitMQ Stream Java client library, is dual-licensed under the
@@ -140,25 +140,25 @@ public class WrapperMessageBuilder implements MessageBuilder {
 
     @Override
     public MessageAnnotationsBuilder entryUnsigned(String key, byte value) {
-      messageAnnotations.put(key, new UnsignedByte(value));
+      messageAnnotations.put(key, UnsignedByte.valueOf(value));
       return this;
     }
 
     @Override
     public MessageAnnotationsBuilder entryUnsigned(String key, short value) {
-      messageAnnotations.put(key, new UnsignedShort(value));
+      messageAnnotations.put(key, UnsignedShort.valueOf(value));
       return this;
     }
 
     @Override
     public MessageAnnotationsBuilder entryUnsigned(String key, int value) {
-      messageAnnotations.put(key, new UnsignedInteger(value));
+      messageAnnotations.put(key, UnsignedInteger.valueOf(value));
       return this;
     }
 
     @Override
     public MessageAnnotationsBuilder entryUnsigned(String key, long value) {
-      messageAnnotations.put(key, new UnsignedLong(value));
+      messageAnnotations.put(key, UnsignedLong.valueOf(value));
       return this;
     }
 
@@ -419,25 +419,25 @@ public class WrapperMessageBuilder implements MessageBuilder {
 
     @Override
     public ApplicationPropertiesBuilder entryUnsigned(String key, byte value) {
-      applicationProperties.put(key, new UnsignedByte(value));
+      applicationProperties.put(key, UnsignedByte.valueOf(value));
       return this;
     }
 
     @Override
     public ApplicationPropertiesBuilder entryUnsigned(String key, short value) {
-      applicationProperties.put(key, new UnsignedShort(value));
+      applicationProperties.put(key, UnsignedShort.valueOf(value));
       return this;
     }
 
     @Override
     public ApplicationPropertiesBuilder entryUnsigned(String key, int value) {
-      applicationProperties.put(key, new UnsignedInteger(value));
+      applicationProperties.put(key, UnsignedInteger.valueOf(value));
       return this;
     }
 
     @Override
     public ApplicationPropertiesBuilder entryUnsigned(String key, long value) {
-      applicationProperties.put(key, new UnsignedLong(value));
+      applicationProperties.put(key, UnsignedLong.valueOf(value));
       return this;
     }
 
@@ -514,7 +514,7 @@ public class WrapperMessageBuilder implements MessageBuilder {
     private final boolean hasPublishingId;
     private final long publishingId;
     private final Object body;
-    private final Map<String, Object> messageAnnotations;
+    private Map<String, Object> messageAnnotations;
     private final Properties properties;
     private final Map<String, Object> applicationProperties;
 
@@ -565,7 +565,32 @@ public class WrapperMessageBuilder implements MessageBuilder {
 
     @Override
     public Map<String, Object> getMessageAnnotations() {
+      if (messageAnnotations == null) {
+        messageAnnotations = new LinkedHashMap<>();
+      }
       return messageAnnotations;
+    }
+
+    @Override
+    public Message annotate(String key, Object value) {
+      if (this.messageAnnotations == null) {
+        this.messageAnnotations = new LinkedHashMap<>();
+      }
+      this.messageAnnotations.put(key, value);
+      return this;
+    }
+
+    @Override
+    public Message copy() {
+      Map<String, Object> annotationsCopy =
+          this.messageAnnotations == null ? null : new LinkedHashMap<>(this.messageAnnotations);
+      return new SimpleMessage(
+          this.hasPublishingId,
+          this.publishingId,
+          this.body,
+          annotationsCopy,
+          this.properties,
+          this.applicationProperties);
     }
   }
 
@@ -592,12 +617,15 @@ public class WrapperMessageBuilder implements MessageBuilder {
 
     @Override
     public String getMessageIdAsString() {
-      return (String) messageId;
+      return messageId == null ? null : messageId.toString();
     }
 
     @Override
     public long getMessageIdAsLong() {
-      return (Long) messageId;
+      if (messageId instanceof UnsignedLong) {
+        return ((UnsignedLong) messageId).longValue();
+      }
+      return ((Number) messageId).longValue();
     }
 
     @Override
@@ -637,12 +665,15 @@ public class WrapperMessageBuilder implements MessageBuilder {
 
     @Override
     public String getCorrelationIdAsString() {
-      return (String) correlationId;
+      return correlationId == null ? null : correlationId.toString();
     }
 
     @Override
     public long getCorrelationIdAsLong() {
-      return (long) correlationId;
+      if (correlationId instanceof UnsignedLong) {
+        return ((UnsignedLong) correlationId).longValue();
+      }
+      return ((Number) correlationId).longValue();
     }
 
     @Override

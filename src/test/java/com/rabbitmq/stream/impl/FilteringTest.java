@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2025 Broadcom. All Rights Reserved.
+// Copyright (c) 2007-2026 Broadcom. All Rights Reserved.
 // The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
 //
 // This software, the RabbitMQ Stream Java client library, is dual-licensed under the
@@ -202,6 +202,7 @@ public class FilteringTest {
                   .builder()
                   .messageHandler(
                       (ctx, msg) -> {
+                        System.out.println(msg.getProperties().getGroupId());
                         receivedFilterValues.add(
                             msg.getProperties().getGroupId() == null
                                 ? "null"
