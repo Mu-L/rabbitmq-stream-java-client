@@ -20,6 +20,7 @@ import com.rabbitmq.stream.Codec;
 import com.rabbitmq.stream.Message;
 import com.rabbitmq.stream.MessageBuilder;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -240,7 +241,7 @@ public class StreamingEncodedMessageTest {
             .build();
 
     // Size should be available immediately after construction
-    Codec.EncodedMessage encoded = new StreamingEncodedMessage(message);
+    Codec.EncodedMessage encoded = new StreamingEncodedMessage(message, ByteBufAllocator.DEFAULT);
     int size = encoded.getSize();
 
     assertThat(size).isGreaterThan(0);

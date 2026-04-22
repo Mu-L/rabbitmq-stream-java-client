@@ -35,8 +35,19 @@ public interface Codec {
 
   interface EncodedMessage {
 
+    /**
+     * Used for outbound, compressed messages.
+     *
+     * @param outputStream
+     * @throws IOException
+     */
     void writeTo(OutputStream outputStream) throws IOException;
 
+    /**
+     * Use for outbound, uncompressed messages.
+     *
+     * @param buf
+     */
     void writeTo(ByteBuf buf);
 
     int getSize();

@@ -17,7 +17,7 @@ package com.rabbitmq.stream.codec;
 import com.rabbitmq.stream.Codec;
 import com.rabbitmq.stream.Message;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.ByteBufAllocator;
 import java.io.IOException;
 import java.io.OutputStream;
 
@@ -43,12 +43,14 @@ final class StreamingEncodedMessage implements Codec.EncodedMessage {
 
   private static final byte[] EMPTY_BODY = new byte[0];
 
+  private final ByteBufAllocator allocator;
   private final Message message;
   private final int size;
 
-  public StreamingEncodedMessage(Message message) {
+  public StreamingEncodedMessage(Message message, ByteBufAllocator allocator) {
     this.message = message;
     this.size = Amqp10.calculateMessageSize(message);
+    this.allocator = allocator;
   }
 
   @Override
@@ -72,7 +74,7 @@ final class StreamingEncodedMessage implements Codec.EncodedMessage {
     outputStream.write((size >>> 0) & 0xFF);
 
     // Encode directly to OutputStream via heap ByteBuf with exact size
-    ByteBuf tempBuf = PooledByteBufAllocator.DEFAULT.heapBuffer(size, size);
+    ByteBuf tempBuf = this.allocator.heapBuffer(size, size);
     try {
       encodeMessageToBuf(tempBuf, message);
       // Direct access to underlying array for optimal performance
