@@ -30,7 +30,7 @@ final class Codecs {
   private static Codec instanciateDefault() {
     try {
       return (Codec)
-          Class.forName("com.rabbitmq.stream.codec.QpidProtonCodec").getConstructor().newInstance();
+          Class.forName("com.rabbitmq.stream.codec.InternalCodec").getConstructor().newInstance();
     } catch (Exception e) {
       throw new StreamException("Error while creating internal codec", e);
     }

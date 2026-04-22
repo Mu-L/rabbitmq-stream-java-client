@@ -19,6 +19,7 @@ import com.rabbitmq.stream.Message;
 import com.rabbitmq.stream.MessageBuilder;
 import com.rabbitmq.stream.Properties;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -53,9 +54,31 @@ import java.util.Map;
  */
 public class InternalCodec implements Codec {
 
+  private final ByteBufAllocator allocator;
+
+  /**
+   * Instantiate codec with default {@link io.netty.buffer.ByteBufAllocator}.
+   *
+   * <p>Default allocator is {@link io.netty.buffer.ByteBufAllocator#DEFAULT}.
+   */
+  public InternalCodec() {
+    this(ByteBufAllocator.DEFAULT);
+  }
+
+  /**
+   * Instantiate codec with custom {@link io.netty.buffer.ByteBufAllocator}.
+   *
+   * <p>The allocator is used only for compressed outbound messages.
+   *
+   * @param allocator allocator for compressed messages
+   */
+  public InternalCodec(ByteBufAllocator allocator) {
+    this.allocator = allocator;
+  }
+
   @Override
   public EncodedMessage encode(Message message) {
-    return new StreamingEncodedMessage(message);
+    return new StreamingEncodedMessage(message, this.allocator);
   }
 
   @Override
