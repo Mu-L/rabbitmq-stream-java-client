@@ -98,6 +98,9 @@ class ServerFrameHandler {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ServerFrameHandler.class);
   private static final FrameHandler RESPONSE_FRAME_HANDLER = new ResponseFrameHandler();
+  // sanity bound on declared uncompressed size vs. actual compressed size, to guard
+  // against a malicious/corrupted frame triggering an oversized buffer allocation
+  private static final int MAX_COMPRESSION_RATIO = 1024;
 
   private static final FrameHandler[][] HANDLERS;
 
@@ -276,9 +279,32 @@ class ServerFrameHandler {
 
   private static StringPayload readString(ByteBuf bb) {
     short size = bb.readShort();
+    checkSize(size, bb);
     byte[] bytes = new byte[size];
     bb.readBytes(bytes);
     return new StringPayload(new String(bytes, StandardCharsets.UTF_8), size);
+  }
+
+  private static void checkSize(int size, ByteBuf bb) {
+    if (size < 0 || size > bb.readableBytes()) {
+      throw new StreamException(
+          "Invalid declared size "
+              + size
+              + ", only "
+              + bb.readableBytes()
+              + " byte(s) available in frame");
+    }
+  }
+
+  private static void checkCount(int count, int minBytesPerItem, ByteBuf bb) {
+    if (count < 0 || (long) count * minBytesPerItem > bb.readableBytes()) {
+      throw new StreamException(
+          "Invalid declared count "
+              + count
+              + ", only "
+              + bb.readableBytes()
+              + " byte(s) available in frame");
+    }
   }
 
   interface FrameHandler {
@@ -388,6 +414,7 @@ class ServerFrameHandler {
         Object chunkContext) {
       int entrySize = bb.readInt();
       read += 4;
+      checkSize(entrySize, bb);
       read += entrySize;
 
       if (ignore && Long.compareUnsigned(offset, offsetLimit) < 0) {
@@ -571,6 +598,15 @@ class ServerFrameHandler {
           read += 4;
           int dataSize = message.readInt();
           read += 4;
+          checkSize(dataSize, message);
+          if (uncompressedDataSize < 0
+              || uncompressedDataSize > (long) dataSize * MAX_COMPRESSION_RATIO) {
+            throw new StreamException(
+                "Invalid uncompressed data size "
+                    + uncompressedDataSize
+                    + " for compressed size "
+                    + dataSize);
+          }
 
           int readBeforeSubEntries = read;
           ByteBuf bbToReadFrom = message;
@@ -863,6 +899,7 @@ class ServerFrameHandler {
 
       int serverPropertiesCount = message.readInt();
       read += 4;
+      checkCount(serverPropertiesCount, 4, message); // key + value, 2-byte length prefix each
       Map<String, String> serverProperties =
           new LinkedHashMap<>((int) (serverPropertiesCount / 0.75f) + 1);
 
@@ -900,6 +937,7 @@ class ServerFrameHandler {
       if (message.isReadable()) {
         int connectionPropertiesCount = message.readInt();
         read += 4;
+        checkCount(connectionPropertiesCount, 4, message); // key + value, 2-byte prefix each
         connectionProperties = new LinkedHashMap<>((int) (connectionPropertiesCount / 0.75f) + 1);
         for (int i = 0; i < connectionPropertiesCount; i++) {
           StringPayload key = readString(message);
@@ -992,6 +1030,7 @@ class ServerFrameHandler {
       if (responseCode == RESPONSE_CODE_SASL_CHALLENGE) {
         int challengeSize = message.readInt();
         read += 4;
+        checkSize(challengeSize, message);
         challenge = new byte[challengeSize];
         message.readBytes(challenge);
         read += challenge.length;
@@ -1041,6 +1080,7 @@ class ServerFrameHandler {
       int mechanismsCount = message.readInt();
 
       read += 4;
+      checkCount(mechanismsCount, 2, message); // 2-byte length prefix per mechanism
       List<String> mechanisms = new ArrayList<>(mechanismsCount);
       for (int i = 0; i < mechanismsCount; i++) {
         StringPayload mechanism = readString(message);
@@ -1071,6 +1111,7 @@ class ServerFrameHandler {
       int read = 4;
       int brokersCount = message.readInt();
       read += 4;
+      checkCount(brokersCount, 8, message); // reference(2) + host(2) + port(4)
       Map<Short, Broker> brokers = new HashMap<>((int) (brokersCount / 0.75f) + 1);
       for (int i = 0; i < brokersCount; i++) {
         short brokerReference = message.readShort();
@@ -1083,6 +1124,7 @@ class ServerFrameHandler {
       }
 
       int streamsCount = message.readInt();
+      checkCount(streamsCount, 10, message); // name(2) + code(2) + leader(2) + replicas count(4)
       Map<String, StreamMetadata> results = new LinkedHashMap<>((int) (streamsCount / 0.75f) + 1);
       read += 4;
       for (int i = 0; i < streamsCount; i++) {
@@ -1094,6 +1136,7 @@ class ServerFrameHandler {
         read += 2;
         int replicasCount = message.readInt();
         read += 4;
+        checkCount(replicasCount, 2, message); // reference
         List<Broker> replicas;
         if (replicasCount == 0) {
           replicas = Collections.emptyList();
@@ -1154,6 +1197,7 @@ class ServerFrameHandler {
       read += 2;
       int streamCount = message.readInt();
       read += 4;
+      checkCount(streamCount, 2, message); // 2-byte length prefix per stream name
       List<String> streams;
       if (streamCount == 0) {
         streams = Collections.emptyList();
@@ -1192,6 +1236,7 @@ class ServerFrameHandler {
       read += 2;
       int streamCount = message.readInt();
       read += 4;
+      checkCount(streamCount, 2, message); // 2-byte length prefix per stream name
 
       List<String> streams;
       if (streamCount == 0) {
@@ -1234,6 +1279,7 @@ class ServerFrameHandler {
       read += 2;
       int commandVersionsCount = message.readInt();
       read += 4;
+      checkCount(commandVersionsCount, 6, message); // key(2) + minVersion(2) + maxVersion(2)
 
       List<FrameHandlerInfo> commandVersions;
       if (commandVersionsCount == 0) {
@@ -1281,6 +1327,7 @@ class ServerFrameHandler {
 
       int infoCount = message.readInt();
       read += 4;
+      checkCount(infoCount, 10, message); // key(2) + value(8)
       Map<String, Long> info = new LinkedHashMap<>((int) (infoCount / 0.75f) + 1);
 
       for (int i = 0; i < infoCount; i++) {

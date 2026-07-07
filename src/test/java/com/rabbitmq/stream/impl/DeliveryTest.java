@@ -48,6 +48,7 @@ public class DeliveryTest {
 
         @Override
         public Message decode(ByteBuf buf, int length) {
+          buf.skipBytes(length);
           return null;
         }
 
