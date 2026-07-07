@@ -95,6 +95,7 @@ import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
@@ -185,6 +186,7 @@ public class Client implements AutoCloseable {
   private static final PublishErrorListener NO_OP_PUBLISH_ERROR_LISTENER =
       (publisherId, publishingId, errorCode) -> {};
   private static final Logger LOGGER = LoggerFactory.getLogger(Client.class);
+
   final PublishConfirmListener publishConfirmListener;
   final PublishErrorListener publishErrorListener;
   final ChunkListener chunkListener;
@@ -328,8 +330,7 @@ public class Client implements AutoCloseable {
                         FlushConsolidationHandler.DEFAULT_EXPLICIT_FLUSH_AFTER_FLUSHES, true));
             ch.pipeline()
                 .addLast(
-                    NETTY_HANDLER_FRAME_DECODER,
-                    new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4));
+                    NETTY_HANDLER_FRAME_DECODER, frameDecoder(parameters.requestedMaxFrameSize));
             ch.pipeline().addLast(NETTY_HANDLER_STREAM, new StreamHandler());
             ch.pipeline().addLast(new MetricsHandler(metricsCollector));
             if (parameters.sslContext != null) {
@@ -3082,5 +3083,16 @@ public class Client implements AutoCloseable {
     boolean hasOffsets() {
       return this.hasOffsets;
     }
+  }
+
+  // LengthFieldBasedFrameDecoder(maxFrameLength, 0, 4, 0, 4) compares declared-body-length + 4
+  // (the length field itself) against maxFrameLength, while maxFrameSize/requestedMaxFrameSize
+  // refer to the body length only, hence the +4 below.
+  static int frameDecoderMaxLength(int maxFrameSize) {
+    return maxFrameSize > 0 ? maxFrameSize + 4 : Integer.MAX_VALUE;
+  }
+
+  static ChannelHandler frameDecoder(int maxFrameSize) {
+    return new LengthFieldBasedFrameDecoder(frameDecoderMaxLength(maxFrameSize), 0, 4, 0, 4);
   }
 }
