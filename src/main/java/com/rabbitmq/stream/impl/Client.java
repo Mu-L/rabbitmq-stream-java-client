@@ -120,8 +120,6 @@ import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -167,7 +165,6 @@ import org.slf4j.LoggerFactory;
 public class Client implements AutoCloseable {
 
   private static final AtomicLong ID_SEQUENCE = new AtomicLong(0);
-  private static final Charset CHARSET = StandardCharsets.UTF_8;
   public static final int DEFAULT_PORT = 5552;
   public static final int DEFAULT_TLS_PORT = 5551;
   static final int MAX_REFERENCE_SIZE = 256;
