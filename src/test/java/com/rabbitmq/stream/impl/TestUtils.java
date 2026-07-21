@@ -495,6 +495,25 @@ public final class TestUtils {
     return currentVersion;
   }
 
+  static Integer erlangMajorVersion(String platform) {
+    if (platform == null) {
+      return null;
+    }
+    // platform looks like: Erlang/OTP 27.3.4.14
+    int spaceIndex = platform.lastIndexOf(' ');
+    if (spaceIndex < 0 || spaceIndex == platform.length() - 1) {
+      return null;
+    }
+    String version = platform.substring(spaceIndex + 1);
+    int dotIndex = version.indexOf('.');
+    String majorVersion = dotIndex < 0 ? version : version.substring(0, dotIndex);
+    try {
+      return Integer.valueOf(majorVersion);
+    } catch (NumberFormatException e) {
+      return null;
+    }
+  }
+
   static boolean beforeMessageContainers(String currentVersion) {
     return Utils.versionCompare(currentVersion(currentVersion), "3.13.0") < 0;
   }
@@ -673,6 +692,7 @@ public final class TestUtils {
       }
 
       String brokerVersion = null;
+      Integer erlangMajorVersion = null;
       field = field(context.getTestInstance().get().getClass(), "stream");
       if (field != null) {
         field.setAccessible(true);
@@ -681,6 +701,9 @@ public final class TestUtils {
         Client client =
             new Client(new Client.ClientParameters().eventLoopGroup(eventLoopGroup(context)));
         brokerVersion = currentVersion(client.brokerVersion());
+        context.getRoot().getStore(Namespace.GLOBAL).put("brokerVersion", brokerVersion);
+        erlangMajorVersion = erlangMajorVersion(client.serverProperty("platform"));
+        context.getRoot().getStore(Namespace.GLOBAL).put("erlangMajorVersion", erlangMajorVersion);
         Client.Response response = client.create(stream);
         assertThat(response.isOk()).isTrue();
         store(context.getRoot()).put("filteringSupported", client.filteringSupported());
@@ -713,6 +736,28 @@ public final class TestUtils {
         context.getRoot().getStore(Namespace.GLOBAL).put("brokerVersion", brokerVersion);
         field.setAccessible(true);
         field.set(context.getTestInstance().get(), brokerVersion);
+      }
+
+      field = field(context.getTestInstance().get().getClass(), "erlangMajorVersion");
+      if (field != null) {
+        if (erlangMajorVersion == null) {
+          erlangMajorVersion =
+              context.getRoot().getStore(Namespace.GLOBAL).get("erlangMajorVersion", Integer.class);
+        }
+        if (erlangMajorVersion == null) {
+          Client client =
+              new Client(new Client.ClientParameters().eventLoopGroup(eventLoopGroup(context)));
+          erlangMajorVersion = erlangMajorVersion(client.serverProperty("platform"));
+          context
+              .getRoot()
+              .getStore(Namespace.GLOBAL)
+              .put("erlangMajorVersion", erlangMajorVersion);
+          client.close();
+        }
+        if (erlangMajorVersion != null) {
+          field.setAccessible(true);
+          field.set(context.getTestInstance().get(), erlangMajorVersion);
+        }
       }
     }
 

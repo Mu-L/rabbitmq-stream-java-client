@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2025 Broadcom. All Rights Reserved.
+// Copyright (c) 2021-2026 Broadcom. All Rights Reserved.
 // The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
 //
 // This software, the RabbitMQ Stream Java client library, is dual-licensed under the
@@ -37,6 +37,7 @@ import com.rabbitmq.stream.impl.TestUtils.BrokerVersionAtLeast;
 import com.rabbitmq.stream.impl.TestUtils.DisabledIfAuthMechanismSslNotEnabled;
 import com.rabbitmq.stream.impl.TestUtils.DisabledIfTlsNotEnabled;
 import com.rabbitmq.stream.sasl.DefaultSaslConfiguration;
+import io.netty.handler.ssl.OpenSslContextOption;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
@@ -75,6 +76,7 @@ public class TlsTest {
   @Parameter SslProvider sslProvider;
 
   String stream;
+  Integer erlangMajorVersion;
 
   TestUtils.ClientFactory cf;
   int credit = 10;
@@ -244,6 +246,19 @@ public class TlsTest {
             .keyManager(clientKey(), clientCertificate())
             .build();
 
+    cf.get(new ClientParameters().sslContext(context));
+  }
+
+  @Test
+  void groups() throws Exception {
+    SslContextBuilder builder =
+        builder().trustManager(caCertificate()).keyManager(clientKey(), clientCertificate());
+    if (this.erlangMajorVersion != null
+        && this.erlangMajorVersion.compareTo(28) >= 0
+        && SslProvider.OPENSSL == this.sslProvider) {
+      builder.option(OpenSslContextOption.GROUPS, new String[] {"X25519MLKEM768"});
+    }
+    SslContext context = builder.build();
     cf.get(new ClientParameters().sslContext(context));
   }
 

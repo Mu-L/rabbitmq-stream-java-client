@@ -1689,6 +1689,10 @@ public class Client implements AutoCloseable {
     return this.serverProperties.get("version");
   }
 
+  String serverProperty(String property) {
+    return this.serverProperties.get(property);
+  }
+
   private String connectionProperties(String key) {
     if (this.connectionProperties != null && this.connectionProperties.containsKey(key)) {
       return this.connectionProperties.get(key);
