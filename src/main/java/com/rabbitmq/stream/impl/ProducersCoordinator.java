@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2025 Broadcom. All Rights Reserved.
+// Copyright (c) 2020-2026 Broadcom. All Rights Reserved.
 // The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
 //
 // This software, the RabbitMQ Stream Java client library, is dual-licensed under the
@@ -484,8 +484,9 @@ final class ProducersCoordinator implements AutoCloseable {
       lock(
           this.trackerLock,
           () -> {
-            if (this.clientProducersManager != null) {
-              this.clientProducersManager.unregister(this);
+            ClientProducersManager manager = this.clientProducersManager;
+            if (manager != null) {
+              manager.unregister(this);
             }
           });
     }
@@ -571,7 +572,14 @@ final class ProducersCoordinator implements AutoCloseable {
 
     @Override
     public void cancel() {
-      lock(this.trackerLock, () -> this.clientProducersManager.unregister(this));
+      lock(
+          this.trackerLock,
+          () -> {
+            ClientProducersManager manager = this.clientProducersManager;
+            if (manager != null) {
+              manager.unregister(this);
+            }
+          });
     }
 
     @Override
